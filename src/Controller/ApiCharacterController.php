@@ -80,7 +80,7 @@ final class ApiCharacterController extends AbstractController
         // Create a new character //
 
     #[Route('', name: 'create', methods: ['POST'])]
-    public function create(EntityManagerInterface $em, Request $request): JsonResponse 
+    public function create(EntityManagerInterface $em, Request $request): JsonResponse
     {
         $data = json_decode($request->getContent(), true);
 
@@ -123,7 +123,7 @@ final class ApiCharacterController extends AbstractController
         // Update an existing character //
 
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
-    public function update(EntityManagerInterface $em, Request $request, int $id): JsonResponse 
+    public function update(EntityManagerInterface $em, Request $request, int $id): JsonResponse
     {
         $character = $em->getRepository(Character::class)->find($id);
 

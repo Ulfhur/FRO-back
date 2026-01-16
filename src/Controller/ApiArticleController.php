@@ -35,6 +35,7 @@ final class ApiArticleController extends AbstractController
     }
 
         // Get a single article by ID //
+
     #[Route('/{id}', name: 'get', methods: ['GET'])]
     public function get(EntityManagerInterface $em, int $id): JsonResponse
     {
@@ -57,6 +58,7 @@ final class ApiArticleController extends AbstractController
     }
 
         // Create a new article //
+
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(EntityManagerInterface $em, Request $request): JsonResponse
     {
@@ -77,6 +79,7 @@ final class ApiArticleController extends AbstractController
     }
 
         // Update an existing article //
+
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function update(EntityManagerInterface $em, Request $request, int $id): JsonResponse
     {
@@ -105,6 +108,7 @@ final class ApiArticleController extends AbstractController
     }
 
         // Delete an article //
+        
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(EntityManagerInterface $em, int $id): JsonResponse
     {

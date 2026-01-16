@@ -65,6 +65,7 @@ final class ApiImageController extends AbstractController
     }
 
         // Create a new image //
+        
     #[Route('', name: 'create', methods: ['POST'])]
     public function create(EntityManagerInterface $em, Request $request): JsonResponse
     {
@@ -87,6 +88,7 @@ final class ApiImageController extends AbstractController
     }
 
         // Update an existing image //
+
     #[Route('/{id}', name: 'update', methods: ['PUT'])]
     public function update(int $id, EntityManagerInterface $em, Request $request): JsonResponse
     {
@@ -113,6 +115,7 @@ final class ApiImageController extends AbstractController
     }
 
         // Delete an image //
+
     #[Route('/{id}', name: 'delete', methods: ['DELETE'])]
     public function delete(int $id, EntityManagerInterface $em): JsonResponse
     {
