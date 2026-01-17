@@ -8,6 +8,8 @@ use Symfony\Component\Routing\Attribute\Route;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use App\Entity\Article;
+use App\Entity\User;
+use App\Entity\Character;
 
 #[Route('/api/article', name: 'api_article_')]
 final class ApiArticleController extends AbstractController
@@ -65,11 +67,29 @@ final class ApiArticleController extends AbstractController
         $data = json_decode($request->getContent(), true);
 
         $article = new Article();
+
+        if(empty($data['name']) || empty($data['type']) || !isset($data['active']) || empty($data['authorId']) || empty($data['characterRelId'])) {
+            return new JsonResponse(['error' => 'Missing required fields'], 400);
+        }
+
         $article->setName($data['name']);
         $article->setType($data['type']);
         $article->setActive($data['active']);
-        $article->setAuthor($em->getRepository('App\Entity\User')->find($data['authorId']));
-        $article->setCharacterRel($em->getRepository('App\Entity\Character')->find($data['characterRelId']));
+
+            // Fetch and set related entities //
+        
+        $author = $em->getRepository(User::class)->find($data['authorId']);
+        if (!$author) {
+            return new JsonResponse(['error' => 'Invalid author ID'], 400);
+        }
+        $article->setAuthor($author);
+
+        $characterRel = $em->getRepository(Character::class)->find($data['characterRelId']);
+        if (!$characterRel) {
+            return new JsonResponse(['error' => 'Invalid characterRel ID'], 400);
+        }
+        $article->setCharacterRel($characterRel);
+
         $article->setCreatedAt(new \DateTimeImmutable());
 
         $em->persist($article);
@@ -94,12 +114,14 @@ final class ApiArticleController extends AbstractController
         $article->setName($data['name'] ?? $article->getName());
         $article->setType($data['type'] ?? $article->getType());
         $article->setActive($data['active'] ?? $article->isActive());
+
         if (isset($data['authorId'])) {
             $article->setAuthor($em->getRepository('App\Entity\User')->find($data['authorId']));
         }
         if (isset($data['characterRelId'])) {
             $article->setCharacterRel($em->getRepository('App\Entity\Character')->find($data['characterRelId']));
         }
+        
         $article->setUpdatedAt(new \DateTimeImmutable());
 
         $em->flush();
