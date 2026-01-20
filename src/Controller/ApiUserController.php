@@ -24,7 +24,7 @@ final class UserController extends AbstractController
         foreach ($users as $user) {
             $data[] = [
                 'id' => $user->getId(),
-                'pseudo' => $user->getPseudo(),
+                'username' => $user->getUsername(),
                 'mail' => $user->getMail(),
                 'suspended' => $user->isSuspended(),
                 'changePassword' => $user->isChangePassword(),
@@ -47,7 +47,7 @@ final class UserController extends AbstractController
 
         $data = [
             'id' => $user->getId(),
-            'pseudo' => $user->getPseudo(),
+            'username' => $user->getUsername(),
             'mail' => $user->getMail(),
             'suspended' => $user->getSuspended(),
             'changePassword' => $user->getChangePassword(),
@@ -67,13 +67,13 @@ final class UserController extends AbstractController
     
         $data = json_decode($request->getContent(), true);
 
-        if (!isset($data['pseudo'], $data['mail'], $data['password'])) {
+        if (!isset($data['username'], $data['mail'], $data['password'])) {
             return new JsonResponse(['error' => 'Missing required fields'], 400);
         }
 
         $user = new User();
 
-        $user->setPseudo($data['pseudo']);
+        $user->setUsername($data['username']);
         $user->setMail($data['mail']);
         $user->setSuspended($data['suspended'] ?? false);
         $user->setChangePassword($data['changePassword'] ?? false);
@@ -103,8 +103,8 @@ final class UserController extends AbstractController
         }
 
         $data = json_decode($request->getContent(), true);
-        if (isset($data['pseudo'])) {
-            $user->setPseudo($data['pseudo']);
+        if (isset($data['username'])) {
+            $user->setUsername($data['username']);
         }
         if (isset($data['mail'])) {
             $user->setMail($data['mail']);
