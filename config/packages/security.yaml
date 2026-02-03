@@ -14,9 +14,8 @@ security:
             security: false
 
         login:
-            pattern: ^/api/login
+            pattern: ^/api/login_check
             stateless: true
-            provider: app_user_provider
             json_login:
                 check_path: /api/login_check
                 username_path: mail
@@ -27,10 +26,14 @@ security:
         api:
             pattern: ^/api
             stateless: true
-            provider: app_user_provider
             jwt: ~
 
     access_control:
-        - { path: ^/api/login, roles: PUBLIC_ACCESS }
+    
+        - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }
+
+
+
+

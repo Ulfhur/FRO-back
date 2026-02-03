@@ -16,6 +16,7 @@ final class ApiImageController extends AbstractController
     #[Route('', name: 'list', methods: ['GET'])]
     public function list(EntityManagerInterface $em): JsonResponse
     {
+
         $images = $em->getRepository('App\Entity\Image')->findAll();
 
         $data = [];
