@@ -43,6 +43,10 @@ class Character
     #[ORM\ManyToMany(targetEntity: Equipment::class)]
     private Collection $equipment;
 
+    #[ORM\ManyToOne(inversedBy: 'characters')]
+    #[ORM\JoinColumn(nullable: false)]
+    private ?User $user = null;
+
     public function __construct()
     {
         $this->equipment = new ArrayCollection();
@@ -157,6 +161,18 @@ class Character
     public function removeEquipment(Equipment $equipment): static
     {
         $this->equipment->removeElement($equipment);
+
+        return $this;
+    }
+
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    public function setUser(?User $user): static
+    {
+        $this->user = $user;
 
         return $this;
     }

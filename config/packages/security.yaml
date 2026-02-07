@@ -15,6 +15,7 @@ security:
 
         login:
             pattern: ^/api/login_check
+            methods: [POST]
             stateless: true
             json_login:
                 check_path: /api/login_check
@@ -29,7 +30,8 @@ security:
             jwt: ~
 
     access_control:
-    
+
+        - { path: ^/api, roles: PUBLIC_ACCESS, methods: [OPTIONS] }
         - { path: ^/api/login_check, roles: PUBLIC_ACCESS }
         - { path: ^/api/register, roles: PUBLIC_ACCESS }
         - { path: ^/api, roles: IS_AUTHENTICATED_FULLY }

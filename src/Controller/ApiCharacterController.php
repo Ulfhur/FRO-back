@@ -7,6 +7,7 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\Equipment;
+use App\Repository\EquipmentRepository;
 use App\Entity\Character;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -18,32 +19,39 @@ final class ApiCharacterController extends AbstractController
 
    #[Route('', name: 'list', methods: ['GET'])]
     public function list(EntityManagerInterface $em): JsonResponse
-    {
-        $characters = $em->getRepository('App\Entity\Character')->findAll();
+{
+    $user = $this->getUser(); // On récupère l'user du Token
 
-        $data = [];
-        foreach ($characters as $character) {
-            $data[] = [
-                'id' => $character->getId(),
-                'name' => $character->getName(),
-                'genre' => $character->getGenre(),
-                'skinColor' => $character->getSkinColor(),
-                'eyesColor' => $character->getEyesColor(),
-                'hairColor' => $character->getHairColor(),
-                'face' => $character->getFace(),
-                'hair' => $character->getHair(),
-                'equipment' => $character->getEquipment()->map(function (Equipment $equip) {
-                    return [
-                        'id' => $equip->getId(),
-                        'name' => $equip->getName(),
-                        'type' => $equip->getType(),
-                    ];
-                })->toArray(),
-            ];
-        }
-
-        return new JsonResponse($data);
+    if (!$user) {
+        return new JsonResponse(['error' => 'Non authentifié'], 401);
     }
+
+    // 2. On filtre DIRECTEMENT ici
+    $characters = $em->getRepository(Character::class)->findBy(['user' => $user]);
+
+    $data = [];
+    foreach ($characters as $character) {
+        $data[] = [
+            'id' => $character->getId(),
+            'name' => $character->getName(),
+            'genre' => $character->getGenre(),
+            'skinColor' => $character->getSkinColor(),
+            'eyesColor' => $character->getEyesColor(),
+            'hairColor' => $character->getHairColor(),
+            'face' => $character->getFace(),
+            'hair' => $character->getHair(),
+            'equipment' => $character->getEquipment()->map(function (Equipment $equip) {
+                return [
+                    'id' => $equip->getId(),
+                    'name' => $equip->getName(),
+                    'type' => $equip->getType(),
+                ];
+            })->toArray(),
+        ];
+    }
+
+    return new JsonResponse($data);
+}
 
         // Get a single character by ID //
 
@@ -79,31 +87,33 @@ final class ApiCharacterController extends AbstractController
 
         // Create a new character //
 
-    #[Route('', name: 'create', methods: ['POST'])]
-    public function create(EntityManagerInterface $em, Request $request): JsonResponse
+    #[Route('', name: 'api_character_create', methods: ['POST'])]
+    public function create(Request $request, EntityManagerInterface $em, EquipmentRepository $equipRepo): JsonResponse
     {
+        $user = $this->getUser();
+
+        if (!$user) {
+            return $this->json(['error' => 'Utilisateur non authentifié'], 401);
+        }
+
         $data = json_decode($request->getContent(), true);
 
         $character = new Character();
-
         $character->setName($data['name']);
-        $character->setGenre($data['genre']);
-        $character->setSkinColor($data['skinColor']);
-        $character->setEyesColor($data['eyesColor']);
-        $character->setHairColor($data['hairColor']);
-        $character->setFace($data['face']);
-        $character->setHair($data['hair']);
+        $character->setGenre($data['genre'] ?? 'male');
+        $character->setSkinColor($data['skinColor'] ?? 'pale');
+        $character->setEyesColor($data['eyesColor'] ?? 'black');
+        $character->setHairColor($data['hairColor'] ?? 'black');
+        $character->setFace($data['face'] ?? 'standard');
+        $character->setHair($data['hair'] ?? 'short');
 
-            // Add equipment if provided //
+        $character->setUser($user);
 
-        $invalidEquipmentIds = [];
         if (isset($data['equipmentIds']) && is_array($data['equipmentIds'])) {
-            foreach ($data['equipmentIds'] as $equipId) {
-                $equipment = $em->getRepository(Equipment::class)->find($equipId);
-                if ($equipment) {
-                    $character->addEquipment($equipment);
-                } else {
-                    $invalidEquipmentIds[] = $equipId;
+            foreach ($data['equipmentIds'] as $id) {
+                $item = $equipRepo->find($id);
+                if ($item) {
+                    $character->addEquipment($item);
                 }
             }
         }
@@ -111,13 +121,10 @@ final class ApiCharacterController extends AbstractController
         $em->persist($character);
         $em->flush();
 
-        $response = ['status' => 'Character created successfully'];
-        if ($invalidEquipmentIds) {
-            $response['invalidEquipmentIds'] = $invalidEquipmentIds;
-        }
-
-        return new JsonResponse(['status' => 'Character created successfully'], 201);
-
+        return $this->json([
+            'message' => 'Personnage créé avec succès !',
+            'id' => $character->getId()
+        ], 201);
     }
 
         // Update an existing character //
@@ -182,5 +189,38 @@ final class ApiCharacterController extends AbstractController
 
         return new JsonResponse(['status' => 'Character deleted successfully']);
 
+    }
+
+        // Function to get all character of a single User //
+
+    #[Route('/list', name: 'listUser', methods: ['GET'])]
+    public function listUser(EntityManagerInterface $em): JsonResponse
+    {
+        $user = $this->getUser();
+       
+        $characters = $em->getRepository(Character::class)->findBy(['user' => $user]);
+
+        $data = [];
+        foreach ($characters as $character) {
+            $data[] = [
+                'id' => $character->getId(),
+                'name' => $character->getName(),
+                'genre' => $character->getGenre(),
+                'skinColor' => $character->getSkinColor(),
+                'eyesColor' => $character->getEyesColor(),
+                'hairColor' => $character->getHairColor(),
+                'face' => $character->getFace(),
+                'hair' => $character->getHair(),
+                'equipment' => $character->getEquipment()->map(function (Equipment $equip) {
+                    return [
+                        'id' => $equip->getId(),
+                        'name' => $equip->getName(),
+                        'type' => $equip->getType(),
+                    ];
+                })->toArray(),
+            ];
+        }
+
+        return new JsonResponse($data);
     }
 }

@@ -12,12 +12,27 @@ use Symfony\Component\HttpFoundation\Request;
 #[Route('/api/message', name: 'api_message_')]
 final class ApiMessageController extends AbstractController
 {
-        // List of all messages //
-
-    #[Route('', name: 'list', methods: ['GET'])]
+     #[Route('', name: 'list', methods: ['GET'])]
     public function list(EntityManagerInterface $em): JsonResponse
     {
-        $messages = $em->getRepository('App\Entity\Message')->findAll();
+    /** @var \App\Entity\User $user */
+    $user = $this->getUser();
+
+    if (!$user) {
+        return new JsonResponse(['error' => 'Non autorisé'], 401);
+    }
+
+    try {
+        
+        $repository = $em->getRepository(Message::class);
+
+        $messages = $repository->createQueryBuilder('m')
+            ->where('m.sender = :user')
+            ->orWhere('m.recipient = :user')
+            ->setParameter('user', $user)
+            ->orderBy('m.createdAt', 'DESC')
+            ->getQuery()
+            ->getResult();
 
         $data = [];
         foreach ($messages as $message) {
@@ -25,15 +40,20 @@ final class ApiMessageController extends AbstractController
                 'id' => $message->getId(),
                 'title' => $message->getTitle(),
                 'content' => $message->getContent(),
-                'senderId' => $message->getSender()->getId(),
-                'recipientId' => $message->getRecipient()->getId(),
-                'isRead' => $message->isRead(),
-                'createdAt' => $message->getCreatedAt()->format('Y-m-d H:i:s'),
+                // On renvoie les pseudos pour que le JS puisse comparer
+                'senderUsername' => $message->getSender()->getUsername(),
+                'recipientUsername' => $message->getRecipient()->getUsername(),
+                'createdAt' => $message->getCreatedAt()->format('c'), // Format ISO 8601
             ];
         }
 
         return new JsonResponse($data);
+
+    } catch (\Exception $e) {
+        // En cas d'erreur, on renvoie le message d'erreur pour debugger
+        return new JsonResponse(['error' => $e->getMessage()], 500);
     }
+}
 
         // Get a single message by ID //
 
@@ -50,8 +70,8 @@ final class ApiMessageController extends AbstractController
             'id' => $message->getId(),
             'title' => $message->getTitle(),
             'content' => $message->getContent(),
-            'senderId' => $message->getSender()->getId(),
-            'recipientId' => $message->getRecipient()->getId(),
+            'senderId' => $message->getSender()->getUsername(),
+            'recipientId' => $message->getRecipient()->getUsername(),
             'isRead' => $message->isRead(),
             'createdAt' => $message->getCreatedAt()->format('Y-m-d H:i:s'),
         ];
@@ -61,40 +81,46 @@ final class ApiMessageController extends AbstractController
 
         // Create a new message //
 
-    #[Route('', name: 'create', methods: ['POST'])]
+   #[Route('', name: 'create', methods: ['POST'])]
     public function create(EntityManagerInterface $em, Request $request): JsonResponse
     {
-        $data = json_decode($request->getContent(), true);
+    
+    $sender = $this->getUser(); 
 
-        $title = $data['title'] ?? null;
-        $content = $data['content'] ?? null;
-        $senderId = $data['senderId'] ?? null;
-        $recipientId = $data['recipientId'] ?? null;
-
-        if (!$title || !$content || !$senderId || !$recipientId) {
-            return new JsonResponse(['error' => 'Missing required fields'], 400);
-        }
-
-        $sender = $em->getRepository('App\Entity\User')->find($senderId);
-        $recipient = $em->getRepository('App\Entity\User')->find($recipientId);
-
-        if (!$sender || !$recipient) {
-            return new JsonResponse(['error' => 'Invalid sender or recipient ID'], 400);
-        }
-
-        $message = new Message();
-        $message->setTitle($title);
-        $message->setContent($content);
-        $message->setSender($sender);
-        $message->setRecipient($recipient);
-        $message->setIsRead(false);
-        $message->setCreatedAt(new \DateTimeImmutable());
-
-        $em->persist($message);
-        $em->flush();
-
-        return new JsonResponse(['status' => 'Message created'], 201);
+    if (!$sender) {
+        return new JsonResponse(['error' => 'Vous devez être connecté'], 401);
     }
+
+    $data = json_decode($request->getContent(), true);
+
+    $title = $data['title'] ?? null;
+    $content = $data['content'] ?? null;
+    $recipientUsername = $data['recipientUsername'] ?? null;
+
+    if (!$title || !$content || !$recipientUsername) {
+        return new JsonResponse(['error' => 'Missing required fields'], 400);
+    }
+
+    $recipient = $em->getRepository('App\Entity\User')->findOneBy(['username' => $recipientUsername]);
+
+    if (!$recipient) {
+        return new JsonResponse(['error' => 'Destinataire introuvable'], 404);
+    }
+
+    // 4. Création du message
+    $message = new Message();
+    $message->setTitle($title);
+    $message->setContent($content);
+    $message->setSender($sender); // On utilise l'objet $sender récupéré plus haut
+    $message->setRecipient($recipient);
+    $message->setIsRead(false);
+    $message->setCreatedAt(new \DateTimeImmutable());
+
+    $em->persist($message);
+    $em->flush();
+
+    return new JsonResponse(['status' => 'Message created'], 201);
+}
 
         // Update a message by ID // 
 
