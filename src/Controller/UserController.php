@@ -9,10 +9,32 @@ use Symfony\Component\Routing\Attribute\Route;
 use App\Entity\User;
 use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\SecurityBundle\Security;
+
 
 #[Route('/api/user', name: 'api_user_')]
 final class UserController extends AbstractController
-{
+{  
+
+    // Get info of a connected user (for Profile page) //
+
+    #[Route('/me', name: 'me', methods: ['GET'])]
+    public function me(Security $security): JsonResponse
+    {
+        /** @var User $user */
+        $user = $security->getUser();
+
+        if (!$user instanceof \App\Entity\User) {
+            return new JsonResponse(['error' => 'Utilisateur non trouvé'], 401);
+        }
+
+        return new JsonResponse([
+
+            'username' => $user->getUsername(),
+            'mail'     => $user->getMail(),
+        ]);
+    }
+
         // Get a list of all users //
     
     #[Route('', name: 'list', methods: ['GET'])]

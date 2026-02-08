@@ -26,9 +26,9 @@ class Comment
     #[ORM\Column(length: 50)]
     private ?string $status = null;
 
-    #[ORM\ManyToOne]
+    #[ORM\ManyToOne(inversedBy: 'comments')]
     #[ORM\JoinColumn(nullable: false)]
-    private ?Article $article = null;
+    private ?Character $character = null;
 
     #[ORM\ManyToOne]
     #[ORM\JoinColumn(nullable: false)]
@@ -87,15 +87,14 @@ class Comment
         return $this;
     }
 
-    public function getArticle(): ?Article
+    public function getCharacter(): ?Character
     {
-        return $this->article;
+        return $this->character;
     }
 
-    public function setArticle(?Article $article): static
+    public function setCharacter(?Character $character): static
     {
-        $this->article = $article;
-
+        $this->character = $character;
         return $this;
     }
 

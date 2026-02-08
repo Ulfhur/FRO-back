@@ -10,23 +10,67 @@ use App\Entity\Equipment;
 use App\Repository\EquipmentRepository;
 use App\Entity\Character;
 use Symfony\Component\HttpFoundation\Request;
+use Symfony\Bundle\SecurityBundle\Security;
+use App\Repository\CommentRepository;
 
 
 #[Route('/api/character', name: 'api_character_')]
 final class ApiCharacterController extends AbstractController
 {
+
+    // Get characters created from the community //
+
+    #[Route('/community', name: 'api_characters_community', methods: ['GET'])]
+    public function getCommunityCharacters(EntityManagerInterface $em, Security $security, \App\Repository\CommentRepository $commentRepo): JsonResponse
+    {
+        try {
+            $currentUser = $security->getUser();
+            $allCharacters = $em->getRepository(Character::class)->findAll();
+            
+            $data = [];
+            foreach ($allCharacters as $char) {
+                $owner = $char->getUser();
+
+                if (!$owner || ($currentUser && $owner->getId() === $currentUser->getId())) {
+                    continue;
+                }
+
+                $equipmentImages = [];
+                foreach ($char->getEquipment() as $item) {
+                    if (method_exists($item, 'getImage')) {
+                        $equipmentImages[] = $item->getImage();
+                    }
+                }
+
+                // REMPLACEMENT ICI : On utilise le repo pour compter les commentaires
+                $commentCount = $commentRepo->count(['character' => $char]);
+
+                $data[] = [
+                    'id' => $char->getId(),
+                    'name' => $char->getName(),
+                    'owner' => $owner->getUsername(),
+                    'equipments' => $equipmentImages,
+                    'commentCount' => $commentCount
+                ];
+            }
+            return new JsonResponse($data);
+
+        } catch (\Throwable $e) {
+            // Cela te permettra de voir l'erreur exacte dans l'onglet "Response" du navigateur
+            return new JsonResponse(['error' => $e->getMessage()], 500);
+        }
+    }
         // Get a list of all characters //
 
    #[Route('', name: 'list', methods: ['GET'])]
     public function list(EntityManagerInterface $em): JsonResponse
 {
-    $user = $this->getUser(); // On récupère l'user du Token
+    $user = $this->getUser();
 
     if (!$user) {
         return new JsonResponse(['error' => 'Non authentifié'], 401);
     }
 
-    // 2. On filtre DIRECTEMENT ici
     $characters = $em->getRepository(Character::class)->findBy(['user' => $user]);
 
     $data = [];
@@ -150,7 +194,7 @@ final class ApiCharacterController extends AbstractController
 
             // Update equipment if provided //
 
-        $invalidEquipmentIds = []; // Create an array to track invalid equipment IDs //
+        $invalidEquipmentIds = [];
         if (isset($data['equipmentIds']) && is_array($data['equipmentIds'])) {
             $character->clearEquipment();
             foreach ($data['equipmentIds'] as $equipId) {
