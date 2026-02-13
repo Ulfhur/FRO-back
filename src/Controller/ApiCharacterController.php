@@ -12,6 +12,7 @@ use App\Entity\Character;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Bundle\SecurityBundle\Security;
 use App\Repository\CommentRepository;
+use App\Entity\User;
 
 
 #[Route('/api/character', name: 'api_character_')]
@@ -24,11 +25,13 @@ final class ApiCharacterController extends AbstractController
     public function getCommunityCharacters(EntityManagerInterface $em, Security $security, \App\Repository\CommentRepository $commentRepo): JsonResponse
     {
         try {
+            /** @var User|null $currentUser */
             $currentUser = $security->getUser();
-            $allCharacters = $em->getRepository(Character::class)->findAll();
+            
+            $sharedCharacters = $em->getRepository(Character::class)->findBy(['isShared' => true]);
             
             $data = [];
-            foreach ($allCharacters as $char) {
+            foreach ($sharedCharacters as $char) {
                 $owner = $char->getUser();
 
                 if (!$owner || ($currentUser && $owner->getId() === $currentUser->getId())) {
@@ -42,7 +45,6 @@ final class ApiCharacterController extends AbstractController
                     }
                 }
 
-                // REMPLACEMENT ICI : On utilise le repo pour compter les commentaires
                 $commentCount = $commentRepo->count(['character' => $char]);
 
                 $data[] = [
@@ -50,13 +52,13 @@ final class ApiCharacterController extends AbstractController
                     'name' => $char->getName(),
                     'owner' => $owner->getUsername(),
                     'equipments' => $equipmentImages,
-                    'commentCount' => $commentCount
+                    'commentCount' => $commentCount,
+                    'isShared' => $char->isShared()
                 ];
             }
             return new JsonResponse($data);
 
         } catch (\Throwable $e) {
-            // Cela te permettra de voir l'erreur exacte dans l'onglet "Response" du navigateur
             return new JsonResponse(['error' => $e->getMessage()], 500);
         }
     }
@@ -89,8 +91,11 @@ final class ApiCharacterController extends AbstractController
                     'id' => $equip->getId(),
                     'name' => $equip->getName(),
                     'type' => $equip->getType(),
-                ];
-            })->toArray(),
+                    ];
+                })->toArray(),
+            'isShared' => $character->isShared(),
+            'user' => $character->getUser()->getMail(),
+            
         ];
     }
 
@@ -117,6 +122,10 @@ final class ApiCharacterController extends AbstractController
             'hairColor' => $character->getHairColor(),
             'face' => $character->getFace(),
             'hair' => $character->getHair(),
+            'isShared' => $character->isShared(),
+            'user' => [
+                'mail' => $character->getUser() ? $character->getUser()->getMail() : null
+            ],
             'equipment' => $character->getEquipment()->map(function (Equipment $equip) {
                 return [
                     'id' => $equip->getId(),
@@ -177,9 +186,14 @@ final class ApiCharacterController extends AbstractController
     public function update(EntityManagerInterface $em, Request $request, int $id): JsonResponse
     {
         $character = $em->getRepository(Character::class)->find($id);
+        $user = $this->getUser();
 
         if (!$character) {
             return new JsonResponse(['error' => 'No character for this ID founded'], 404);
+        }
+
+        if ($character->getUser() !== $user) {
+            return new JsonResponse(['error' => 'You are not allowed to edit this character'], 403);
         }
 
         $data = json_decode($request->getContent(), true);
@@ -191,6 +205,10 @@ final class ApiCharacterController extends AbstractController
         $character->setHairColor($data['hairColor'] ?? $character->getHairColor());
         $character->setFace($data['face'] ?? $character->getFace());
         $character->setHair($data['hair'] ?? $character->getHair());
+        if (isset($data['isShared'])) {
+            $character->setIsShared((bool)$data['isShared']);
+        }
+
 
             // Update equipment if provided //
 

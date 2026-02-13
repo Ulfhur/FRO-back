@@ -14,7 +14,7 @@ use Symfony\Bundle\SecurityBundle\Security;
 
 #[Route('/api/user', name: 'api_user_')]
 final class UserController extends AbstractController
-{  
+{
 
     // Get info of a connected user (for Profile page) //
 

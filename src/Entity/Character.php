@@ -37,6 +37,9 @@ class Character
     #[ORM\Column(length: 50)]
     private ?string $hair = null;
 
+    #[ORM\Column]
+    private ?bool $isShared = false;
+
     /**
      * @var Collection<int, Equipment>
      */
@@ -140,6 +143,19 @@ class Character
 
         return $this;
     }
+
+    public function isShared(): ?bool
+    {
+        return $this->isShared;
+    }
+
+    public function setIsShared(bool $is_shared): static
+    {
+        $this->isShared = $is_shared;
+
+        return $this;
+    }
+
 
     /**
      * @return Collection<int, Equipment>
