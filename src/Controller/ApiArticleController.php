@@ -26,7 +26,7 @@ final class ApiArticleController extends AbstractController
             $data[] = [
                 'name' => $article->getName(),
                 'type' => $article->getType(),
-                'author' => $article->getAuthor()->getPseudo(),
+                'author' => $article->getAuthor()->getUsername(),
                 'createdAt' => $article->getCreatedAt()->format('Y-m-d H:i:s'),
                 'active' => $article->isActive(),
                 'characterRel' => $article->getCharacterRel()->getName(),
