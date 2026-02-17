@@ -1,8 +1,23 @@
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # 1. Gestion de l'Authorization (important pour ton JWT Token)
     RewriteCond %{HTTP:Authorization} .+
     RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
-    RewriteCond %{REQUEST_FILENAME} !-f
+    # 2. Rediriger la racine vers ton index de jeu
+    RewriteRule ^$ front/index.html [L]
+
+    # 3. Si on cherche un fichier réel (image, css, js du front), on s'arrête là
+    RewriteCond %{REQUEST_FILENAME} -f
+    RewriteRule ^ - [L]
+
+    # 4. Si l'URL commence par /api, on envoie vers Symfony (index.php)
+    RewriteCond %{REQUEST_URI} ^/api
     RewriteRule ^(.*)$ index.php [QSA,L]
+
+    # 5. Pour tout le reste, si ce n'est pas un fichier, on renvoie vers le front
+    # Cela permet de rester sur ton jeu même si on rafraîchit la page
+    RewriteCond %{REQUEST_URI} !^/front
+    RewriteRule ^(.*)$ front/index.html [L]
 </IfModule>
